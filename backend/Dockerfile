@@ -32,13 +32,12 @@ RUN npm ci --only=production
 # Copy compiled output
 COPY --from=builder /app/dist ./dist
 
-# Copy Prisma schema + generated client
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# Copy Prisma schema and generate client for the runner environment
 COPY prisma ./prisma
+RUN npx prisma generate
 
 # Expose port
 EXPOSE 5000
 
-# Run migrations then start
+# Run server
 CMD ["node", "dist/server.js"]
