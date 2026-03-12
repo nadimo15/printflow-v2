@@ -1,0 +1,5 @@
+Debugging InsForge Storage...
+Storage Keys: http
+Storage Prototype: [object Object]
+✅ storage.from() exists.
+❌ storage.createBucket() MISSING.

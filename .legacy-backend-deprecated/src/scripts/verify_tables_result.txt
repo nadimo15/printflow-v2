@@ -1,0 +1,4 @@
+Verifying InsForge Tables for Orders...
+✅ Table "customers" exists.
+✅ Table "order_items" exists.
+✅ Table "tasks" exists.

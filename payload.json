@@ -1,0 +1,16 @@
+{
+    "guestInfo": {
+        "name": "Curl Test",
+        "phone": "0555999999",
+        "email": "curl@test.com",
+        "wilaya": "Alger",
+        "address": "Curl St"
+    },
+    "items": [
+        {
+            "name": "Test Item",
+            "price": 1000,
+            "quantity": 1
+        }
+    ]
+}

@@ -1,0 +1,20 @@
+{
+    "rewrites": [
+        {
+            "source": "/admin/assets/(.*)",
+            "destination": "/assets/$1"
+        },
+        {
+            "source": "/admin/(.*)",
+            "destination": "/index.html"
+        },
+        {
+            "source": "/assets/(.*)",
+            "destination": "/assets/$1"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}

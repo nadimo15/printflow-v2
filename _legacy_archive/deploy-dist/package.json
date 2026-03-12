@@ -1,0 +1,1 @@
+{"name":"printflow-v2-deployment","version":"1.0.0","scripts":{"build":"echo \"No build required\"","start":"serve -s ."}}

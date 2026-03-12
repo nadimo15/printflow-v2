@@ -1,0 +1,426 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PrintFlow Backend — Full Prisma Schema
+// Derived from analysis of frontend-erp/src/services/api.ts usage patterns
+// and edge function logic.
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth / Users ────────────────────────────────────────────────────────────
+
+model Profile {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // bcrypt hash
+  name      String
+  role      String   @default("worker") // admin | manager | worker | designer
+  phone     String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // References
+  tasksAssigned     Task[]       @relation("TaskAssignedTo")
+  tasksAssignedBy   Task[]       @relation("TaskAssignedBy")
+  reworkLogs        ReworkLog[]
+
+  @@map("profiles")
+}
+
+// ─── Products ─────────────────────────────────────────────────────────────────
+
+model Product {
+  id               String   @id @default(uuid())
+  name             String
+  nameAr           String?  @map("name_ar")
+  description      String?
+  descriptionAr    String?  @map("description_ar")
+  category         String?
+  sku              String?  @unique
+  basePrice        Decimal  @default(0) @map("base_price") @db.Decimal(12, 2)
+  unitWeight       Decimal  @default(0) @map("unit_weight") @db.Decimal(8, 3) // kg
+  isActive         Boolean  @default(true) @map("is_active")
+  isPublished      Boolean  @default(false) @map("is_published")
+  images           Json?    // array of image URLs
+  productionOptions Json?   @map("production_options") // {variants: [{size, price, labor_cost_per_piece, ...}]}
+  customizationOptions Json? @map("customization_options") // available print sides, colors, etc.
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  orderItems    OrderItem[]
+  productBOM    ProductBOM[]
+
+  @@map("products")
+}
+
+// ─── Product BOM (Bill of Materials) ─────────────────────────────────────────
+
+model ProductBOM {
+  id                 String   @id @default(uuid())
+  productId          String   @map("product_id")
+  inventoryItemId    String   @map("inventory_item_id")
+  variantSize        String?  @map("variant_size") // null = all sizes
+  qtyPerPiece        Decimal  @map("qty_per_piece") @db.Decimal(10, 4)
+  unit               String   @default("pcs") // pcs, meters, grams, etc.
+  wasteFactor        Decimal  @default(0) @map("waste_factor") @db.Decimal(5, 4) // e.g. 0.05 = 5% waste
+  matchingConditions Json?    @map("matching_conditions") // {size, print_sides, print_colors}
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@map("product_bom")
+}
+
+// ─── Customers ────────────────────────────────────────────────────────────────
+
+model Customer {
+  id                 String   @id @default(uuid())
+  name               String
+  phone              String   @unique
+  email              String?
+  wilaya             String?
+  address            String?
+  isGuest            Boolean  @default(false) @map("is_guest")
+  outstandingBalance Decimal  @default(0) @map("outstanding_balance") @db.Decimal(12, 2)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  orders Order[]
+
+  @@map("customers")
+}
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
+model Order {
+  id              String   @id @default(uuid())
+  orderNumber     String   @unique @map("order_number")
+  customerId      String?  @map("customer_id")
+  guestInfo       Json?    @map("guest_info") // {name, phone, email, wilaya, address}
+  shippingAddress Json?    @map("shipping_address") // {name, phone, wilaya, address}
+
+  // Financials
+  subtotal        Decimal  @default(0) @db.Decimal(12, 2)
+  discount        Decimal  @default(0) @db.Decimal(12, 2)
+  shipping        Decimal  @default(0) @db.Decimal(12, 2)
+  tax             Decimal  @default(0) @db.Decimal(12, 2)
+  total           Decimal  @default(0) @db.Decimal(12, 2)
+  materialCost    Decimal  @default(0) @map("material_cost") @db.Decimal(12, 2)
+  grossMargin     Decimal  @default(0) @map("gross_margin") @db.Decimal(12, 2)
+
+  // Shipping weight
+  totalWeight     Decimal  @default(0) @map("total_weight") @db.Decimal(8, 3) // kg
+  courierName     String?  @map("courier_name")
+  extraWeightKg   Decimal  @default(0) @map("extra_weight_kg") @db.Decimal(8, 3)
+  extraWeightFee  Decimal  @default(0) @map("extra_weight_fee") @db.Decimal(12, 2)
+
+  // Status
+  status          String   @default("pending") // pending | confirmed | in_production | ready | shipped | delivered | cancelled
+  paymentStatus   String   @default("unpaid") @map("payment_status") // unpaid | partial | paid
+  paymentMethod   String?  @map("payment_method") // cash_on_delivery | office_pickup | bank_transfer
+
+  // Tracking
+  trackingNumber  String?  @map("tracking_number")
+  shippedAt       DateTime? @map("shipped_at")
+  deliveredAt     DateTime? @map("delivered_at")
+
+  // Meta
+  source          String   @default("erp") // erp | storefront
+  notes           String?
+  internalNotes   String?  @map("internal_notes")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  customer   Customer?   @relation(fields: [customerId], references: [id])
+  orderItems OrderItem[]
+  tasks      Task[]
+
+  @@map("orders")
+}
+
+// ─── Order Items ──────────────────────────────────────────────────────────────
+
+model OrderItem {
+  id            String   @id @default(uuid())
+  orderId       String   @map("order_id")
+  productId     String?  @map("product_id")
+  name          String
+  nameAr        String?  @map("name_ar")
+  sku           String?
+  unitPrice     Decimal  @map("unit_price") @db.Decimal(12, 2)
+  quantity      Int
+  total         Decimal  @db.Decimal(12, 2)
+  unitWeight    Decimal  @default(0) @map("unit_weight") @db.Decimal(8, 3)
+  totalWeight   Decimal  @default(0) @map("total_weight") @db.Decimal(8, 3)
+  customization Json?    // {selected_size, printOptions: {sides, colors}, designUrl, notes, ...}
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+  tasks   Task[]
+
+  @@map("order_items")
+}
+
+// ─── Tasks (Production Kanban) ────────────────────────────────────────────────
+
+model Task {
+  id               String   @id @default(uuid())
+  title            String
+  description      String?
+  type             String   // design | pre_press | screen_making | printing | quality_check | packing | shipping
+  status           String   @default("pending") // pending | in_progress | paused | completed
+  priority         String   @default("normal") // low | normal | high | urgent
+
+  // Relations
+  orderId          String?  @map("order_id")
+  orderItemId      String?  @map("order_item_id")
+  assignedToId     String?  @map("assigned_to_id")
+  assignedById     String?  @map("assigned_by_id")
+
+  // Time tracking
+  estimatedHours   Decimal? @map("estimated_hours") @db.Decimal(6, 2)
+  actualHours      Decimal? @map("actual_hours") @db.Decimal(6, 2)
+  startedAt        DateTime? @map("started_at")
+  completedAt      DateTime? @map("completed_at")
+  deadlineAt       DateTime? @map("deadline_at")
+
+  // Design approval flow (used by storefront customers)
+  approvalStatus   String?  @default("none") @map("approval_status") // none | pending | approved | rejected
+  rejectionReason  String?  @map("rejection_reason")
+  designFileUrl    String?  @map("design_file_url")
+
+  // Cost tracking (filled when task is completed via BOM deduction)
+  actualCost       Decimal? @map("actual_cost") @db.Decimal(12, 2)
+
+  notes            String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  order        Order?    @relation(fields: [orderId], references: [id])
+  orderItem    OrderItem? @relation(fields: [orderItemId], references: [id])
+  assignedTo   Profile?  @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+  assignedBy   Profile?  @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  reworkLogs   ReworkLog[]
+
+  @@map("tasks")
+}
+
+// ─── Inventory ────────────────────────────────────────────────────────────────
+
+model InventoryItem {
+  id             String   @id @default(uuid())
+  name           String
+  type           String   // blank | ink | chemical | packaging | frame | misc
+  sku            String?  @unique
+  stockQuantity  Decimal  @default(0) @map("stock_quantity") @db.Decimal(10, 3)
+  unitOfMeasure  String   @default("pcs") @map("unit_of_measure") // pcs, meters, liters, grams, kg
+  costPerUnit    Decimal  @default(0) @map("cost_per_unit") @db.Decimal(12, 4)
+  reorderPoint   Decimal? @map("reorder_point") @db.Decimal(10, 3)
+  supplierId     String?  @map("supplier_id")
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  supplier           Supplier?             @relation(fields: [supplierId], references: [id])
+  productBOM         ProductBOM[]
+  inventoryTransactions InventoryTransaction[]
+  inventoryMovements InventoryMovement[]
+  purchaseOrderItems PurchaseOrderItem[]
+
+  @@map("inventory_items")
+}
+
+// ─── Inventory Transactions (stock-out log from task completion) ──────────────
+
+model InventoryTransaction {
+  id              String   @id @default(uuid())
+  itemId          String   @map("item_id")
+  transactionType String   @map("transaction_type") // out | adj | in
+  quantity        Decimal  @db.Decimal(10, 3)
+  referenceId     String?  @map("reference_id") // order_id or task_id
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  item InventoryItem @relation(fields: [itemId], references: [id])
+
+  @@map("inventory_transactions")
+}
+
+// ─── Inventory Movements (from purchase orders) ───────────────────────────────
+
+model InventoryMovement {
+  id             String   @id @default(uuid())
+  inventoryItemId String  @map("inventory_item_id")
+  movementType   String   @map("movement_type") // receipt | adjustment | out
+  quantity       Decimal  @db.Decimal(10, 3)
+  referenceId    String?  @map("reference_id") // purchase_order_id
+  notes          String?
+  createdBy      String?  @map("created_by") // profile_id
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@map("inventory_movements")
+}
+
+// ─── Quality Control ──────────────────────────────────────────────────────────
+
+model ReworkLog {
+  id                String   @id @default(uuid())
+  taskId            String   @map("task_id")
+  orderId           String   @map("order_id")
+  workerId          String?  @map("worker_id")
+  reason            String
+  quantityRuined    Int      @map("quantity_ruined")
+  estimatedCostLoss Decimal? @map("estimated_cost_loss") @db.Decimal(12, 2)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  task   Task    @relation(fields: [taskId], references: [id])
+  worker Profile? @relation(fields: [workerId], references: [id])
+
+  @@map("rework_logs")
+}
+
+// ─── Expenses ─────────────────────────────────────────────────────────────────
+
+model Expense {
+  id          String   @id @default(uuid())
+  description String
+  amount      Decimal  @db.Decimal(12, 2)
+  category    String?  // rent | utilities | salary | materials | maintenance | other
+  date        DateTime @db.Date
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("expenses")
+}
+
+// ─── Workstations ─────────────────────────────────────────────────────────────
+
+model Workstation {
+  id                  String   @id @default(uuid())
+  name                String
+  type                String?  // screen_printing | digital | embroidery | etc.
+  status              String   @default("active") // active | maintenance | inactive
+  lastMaintenanceDate DateTime? @map("last_maintenance_date") @db.Date
+  notes               String?
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("workstations")
+}
+
+// ─── Screen Frames ────────────────────────────────────────────────────────────
+
+model ScreenFrame {
+  id         String   @id @default(uuid())
+  name       String
+  mesh       String?  // e.g. "110 mesh", "160 mesh"
+  size       String?  // e.g. "60x90 cm"
+  status     String   @default("available") // available | in_use | damaged
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("screen_frames")
+}
+
+// ─── Shipping Rules ───────────────────────────────────────────────────────────
+
+model ShippingRule {
+  id             String   @id @default(uuid())
+  courierName    String   @map("courier_name")
+  wilayaName     String?  @map("wilaya_name")
+  baseFee        Decimal  @map("base_fee") @db.Decimal(12, 2)
+  baseWeightKg   Decimal  @default(0) @map("base_weight_kg") @db.Decimal(8, 3)
+  extraFeePerKg  Decimal  @default(0) @map("extra_fee_per_kg") @db.Decimal(12, 2)
+  isActive       Boolean  @default(true) @map("is_active")
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("shipping_rules")
+}
+
+// ─── Suppliers ─────────────────────────────────────────────────────────────────
+
+model Supplier {
+  id           String   @id @default(uuid())
+  name         String
+  contactName  String?  @map("contact_name")
+  phone        String?
+  email        String?
+  address      String?
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  inventoryItems InventoryItem[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+// ─── Purchase Orders ────────────────────────────────────────────────────────────
+
+model PurchaseOrder {
+  id         String   @id @default(uuid())
+  poNumber   String   @unique @map("po_number")
+  supplierId String   @map("supplier_id")
+  status     String   @default("draft") // draft | ordered | received | completed | cancelled
+  totalCost  Decimal  @default(0) @map("total_cost") @db.Decimal(12, 2)
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  supplier Supplier           @relation(fields: [supplierId], references: [id])
+  items    PurchaseOrderItem[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(uuid())
+  purchaseOrderId String   @map("purchase_order_id")
+  inventoryItemId String   @map("inventory_item_id")
+  quantity        Decimal  @db.Decimal(10, 3)
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(12, 4)
+  receivedQty     Decimal  @default(0) @map("received_quantity") @db.Decimal(10, 3)
+  notes           String?
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@map("purchase_order_items")
+}
+
+// ─── Role Permissions ─────────────────────────────────────────────────────────
+
+model RolePermission {
+  role        String   @id // admin | manager | worker | designer
+  permissions Json     // { "canCreateOrders": true, "canEditProducts": false, ... }
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("role_permissions")
+}
+
+// ─── Site Config (CMS) ────────────────────────────────────────────────────────
+
+model SiteConfig {
+  id            String   @id @default("default")
+  draftData     Json?    @map("draft_data")     // WYSIWYG editor draft JSON
+  publishedData Json?    @map("published_data") // Live published JSON
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("site_config")
+}

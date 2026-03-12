@@ -1,0 +1,7 @@
+{
+    "name": "printflow-v2-combined",
+    "version": "2.0.0",
+    "scripts": {
+        "build": "echo 'Static build - no action needed'"
+    }
+}

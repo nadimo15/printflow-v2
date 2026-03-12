@@ -1,0 +1,14 @@
+node_modules
+frontend-store/node_modules
+frontend-erp/node_modules
+backend/node_modules
+.git
+.DS_Store
+dist
+frontend-store/dist
+frontend-erp/dist
+coverage
+tests
+cypress
+.env
+.env.local

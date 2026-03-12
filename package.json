@@ -1,0 +1,7 @@
+{
+    "name": "printflow-v2-root",
+    "private": true,
+    "scripts": {
+        "build": "cd frontend-store && npm install && npm run build:base && cd ../frontend-erp && npm install && npm run build && cd .. && npx -y rimraf frontend-store/dist/admin && npx -y copyfiles -u 2 \"frontend-erp/dist/**/*\" frontend-store/dist/admin"
+    }
+}

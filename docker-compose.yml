@@ -1,0 +1,94 @@
+# ======================================================
+# PrintFlow v2 — docker-compose.yml
+# Local development environment
+# ======================================================
+# Usage:
+#   docker-compose up -d          # Start all services
+#   docker-compose logs -f        # Follow logs
+#   docker-compose down           # Stop all services
+#   docker-compose down -v        # Stop and remove volumes (wipes DB!)
+# ======================================================
+
+version: "3.9"
+
+services:
+  # ─────────────────────────────────────────────────────
+  # PostgreSQL Database
+  # ─────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: printflow_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: printflow
+      POSTGRES_USER: printflow
+      POSTGRES_PASSWORD: printflow_secret
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U printflow -d printflow" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─────────────────────────────────────────────────────
+  # PrintFlow Backend (Node/Express/TypeScript)
+  # ─────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: printflow_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://printflow:printflow_secret@postgres:5432/printflow?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production_please}
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGINS: "http://localhost:5173,http://localhost:5174"
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Uncomment for future file upload support
+      # - uploads_data:/app/uploads
+      []
+
+  # ─────────────────────────────────────────────────────
+  # Backend (DEV MODE — hot reload via ts-node-dev)
+  # Run with: docker-compose --profile dev up backend-dev
+  # ─────────────────────────────────────────────────────
+  backend-dev:
+    image: node:20-alpine
+    container_name: printflow_backend_dev
+    profiles: [ "dev" ]
+    working_dir: /app
+    command: sh -c "npm install && npx prisma generate && npx prisma db push --accept-data-loss && npm run dev"
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      DATABASE_URL: postgresql://printflow:printflow_secret@postgres:5432/printflow?schema=public
+      JWT_SECRET: dev_jwt_secret_change_in_prod
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGINS: "http://localhost:5173,http://localhost:5174"
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+
+volumes:
+  postgres_data:
+    name: printflow_postgres_data
+  backend_node_modules:
+    name: printflow_backend_modules
+  # uploads_data:
+  #   name: printflow_uploads

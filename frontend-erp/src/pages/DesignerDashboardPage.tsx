@@ -1,0 +1,448 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useTasksStore, Task } from '../store/tasksStore';
+import { useAuthStore } from '../store/authStore';
+import { useOrdersStore } from '../store/ordersStore';
+import { CheckCircle2, List, PenTool, LayoutTemplate, AlertCircle, Clock, Play, Pause, History, ArrowDownToLine, Eye } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { handleViewFile, handleDownloadFile } from '../utils/fileViewer';
+
+export default function DesignerDashboardPage() {
+    const { user } = useAuthStore();
+    const { tasks, fetchTasks, isLoading: isTasksLoading, updateTask } = useTasksStore();
+    const { updateTaskStatus: updateOrderTaskStatus, assignTask } = useOrdersStore();
+
+    const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+    const [uploadingTask, setUploadingTask] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (user) {
+            fetchTasks();
+        }
+    }, [user, fetchTasks]);
+
+    // Active (Not Completed)
+    const designerActiveTasks = useMemo(() => {
+        return tasks.filter(t =>
+            (t.type === 'design' || t.type === 'pre_press') &&
+            t.status !== 'completed' &&
+            (!t.assignedToId || t.assignedToId === user?.id)
+        );
+    }, [tasks, user]);
+
+    // History (Completed)
+    const myCompletedTasks = useMemo(() => {
+        return tasks.filter(t =>
+            (t.type === 'design' || t.type === 'pre_press') &&
+            t.assignedToId === user?.id &&
+            t.status === 'completed'
+        ).sort((a, b) => new Date(b.completedAt || 0).getTime() - new Date(a.completedAt || 0).getTime());
+    }, [tasks, user]);
+
+    const activeTask = designerActiveTasks.find(t => t.status === 'in_progress' && t.assignedToId === user?.id);
+    const otherTasks = designerActiveTasks.filter(t => t.status === 'pending' || t.status === 'paused');
+
+    // Grouping by Order
+    const groupedPendingTasks = useMemo(() => {
+        const groups: Record<string, { orderNumber: string, tasks: typeof otherTasks }> = {};
+        for (const t of otherTasks) {
+            const ordKey = t.orderId || t.orderNumber || 'unknown';
+            if (!groups[ordKey]) {
+                groups[ordKey] = {
+                    orderNumber: t.orders?.order_number || t.orderNumber || 'Unknown Order',
+                    tasks: []
+                };
+            }
+            groups[ordKey].tasks.push(t);
+        }
+        return Object.values(groups);
+    }, [otherTasks]);
+
+    const handleClaimAndStart = async (taskId: string, orderId: string) => {
+        if (activeTask && activeTask.id !== taskId) {
+            toast.error('الرجاء إيقاف المهمة الحالية أولاً.');
+            return;
+        }
+        try {
+            await assignTask(orderId, taskId, user?.id || '');
+            await updateOrderTaskStatus(orderId, taskId, 'in_progress');
+            fetchTasks();
+            toast.success('تم استلام المهمة والبدء بها');
+        } catch (e) {
+            toast.error('حدث خطأ أثناء التحديث');
+        }
+    };
+
+    const handlePauseTask = async (taskId: string, orderId: string) => {
+        try {
+            await updateOrderTaskStatus(orderId, taskId, 'paused' as any);
+            fetchTasks();
+            toast.success('تم إيقاف المهمة مؤقتاً');
+        } catch (e) {
+            toast.error('حدث خطأ أثناء الإيقاف');
+        }
+    };
+
+    const handleCompleteTask = async (taskId: string, orderId: string) => {
+        try {
+            await updateOrderTaskStatus(orderId, taskId, 'completed');
+            fetchTasks();
+            toast.success('تم إنجاز التصميم وتجهيزه للإنتاج');
+        } catch (e) {
+            toast.error('حدث خطأ أثناء الإكمال');
+        }
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, taskId: string) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingTask(taskId);
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const base64String = event.target?.result as string;
+            try {
+                await updateTask(taskId, {
+                    designFileUrl: base64String,
+                    approvalStatus: 'pending' // Explicitly shift to pending customer review
+                });
+                toast.success('تم رفع التصميم وإرساله للعميل للمراجعة');
+                fetchTasks(); // refresh view
+            } catch (err) {
+                toast.error('فشل في رفع التصميم');
+            } finally {
+                setUploadingTask(null);
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    if (isTasksLoading && tasks.length === 0) {
+        return <div className="p-12 text-center text-gray-500">جاري تحميل الطابور...</div>;
+    }
+
+    const renderDesignConfig = (task: Task) => {
+        if (!task.order_items) return null;
+
+        const item = Array.isArray(task.order_items) ? task.order_items[0] : task.order_items;
+        if (!item) return null;
+
+        const custom = item.customization || {};
+        const bagColor = custom['لون الكيس'] || custom.color || '-';
+        const size = custom.selected_size || custom.size || '-';
+
+        let printColors = custom['عدد ألوان الطباعة'] || custom.printColors || '-';
+        if (Array.isArray(printColors)) printColors = printColors.join(', ');
+
+        let printSides = custom['وجه الطباعة'] || custom.printOptions?.sides?.value || custom.printSides || '-';
+        if (Array.isArray(printSides)) printSides = printSides.join(', ');
+
+        return (
+            <div className="mb-4 p-3 rounded-lg bg-gray-50 border border-gray-100 space-y-3">
+                <div className="flex flex-col gap-2 pb-2">
+                    <div className="flex justify-between items-start">
+                        <span className="font-bold text-gray-800 text-sm">{item.name}</span>
+                        <span className="font-black text-gray-900 bg-gray-200 px-2 py-0.5 rounded text-xs shrink-0">× {item.quantity}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mt-1">
+                        <div className="flex gap-1"><span className="text-gray-400">المقاس:</span> <span className="font-bold">{size}</span></div>
+                        <div className="flex gap-1"><span className="text-gray-400">لون الحقيبة:</span> <span className="font-bold">{bagColor}</span></div>
+                        <div className="flex gap-1"><span className="text-gray-400">الألوان:</span> <span className="font-bold">{printColors}</span></div>
+                        <div className="flex gap-1"><span className="text-gray-400">الأوجه:</span> <span className="font-bold">{printSides}</span></div>
+                    </div>
+
+                    {(custom.notes || custom['ملاحظات']) && (
+                        <div className="mt-1 text-xs text-orange-700 bg-orange-50 p-1.5 rounded border border-orange-100">
+                            <span className="font-bold">ملاحظة العميل / مبيعات:</span> {custom.notes || custom['ملاحظات']}
+                        </div>
+                    )}
+                </div>
+
+                {custom.designUrl && (
+                    <div className="flex gap-2 w-full mt-2">
+                        <button onClick={(e) => handleViewFile(e, custom.designUrl)} className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 py-1.5 rounded text-center text-xs font-bold hover:bg-blue-100 flex items-center justify-center gap-1 transition-colors">
+                            <Eye className="w-4 h-4" /> عرض مرفق العميل {custom.designFileName ? `(${custom.designFileName})` : ''}
+                        </button>
+                        <button onClick={(e) => handleDownloadFile(e, custom.designUrl, custom.designFileName || 'design-file.png')} title="تحميل المرفق" className="w-8 shrink-0 bg-blue-50 text-blue-700 border border-blue-200 py-1.5 rounded text-center text-xs font-bold hover:bg-blue-100 flex items-center justify-center gap-1 transition-colors">
+                            <ArrowDownToLine className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <div className="space-y-6 max-w-7xl mx-auto pb-10">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 bg-gradient-to-l from-slate-900 to-slate-700 bg-clip-text text-transparent flex items-center gap-2">
+                        <LayoutTemplate className="w-7 h-7" />
+                        طابور التصميم والفرز
+                    </h1>
+                    <p className="text-gray-500 mt-1">
+                        أهلاً، <span className="font-bold text-gray-700">{user?.name}</span>
+                    </p>
+                </div>
+                <button
+                    onClick={() => fetchTasks()}
+                    className="btn btn-secondary px-4 py-2"
+                >
+                    تحديث
+                </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 border-b border-gray-200">
+                <button
+                    onClick={() => setActiveTab('active')}
+                    className={`px-4 py-3 font-bold text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'active' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                >
+                    طابور المهام ({designerActiveTasks.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab('history')}
+                    className={`px-4 py-3 font-bold text-sm border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                >
+                    <History className="w-4 h-4" />
+                    السجل ({myCompletedTasks.length})
+                </button>
+            </div>
+
+            {activeTab === 'active' && (
+                <>
+                    {designerActiveTasks.length === 0 ? (
+                        <div className="p-12 text-center text-gray-500 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center">
+                            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                                <CheckCircle2 className="w-8 h-8 text-gray-300" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900">طابور الانتظار فارغ</h3>
+                            <p>لا توجد مهام تصميم حالية بانتظار التنفيذ.</p>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col lg:flex-row gap-6">
+
+                            {/* Active Work Area */}
+                            {activeTask && (
+                                <div className="lg:w-1/3 shrink-0 flex flex-col gap-4">
+                                    <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse" />
+                                        قيد العمل حالياً
+                                    </h2>
+                                    <div className="bg-white border-2 border-blue-500 rounded-2xl shadow-[0_4px_24px_-8px_rgba(59,130,246,0.3)] overflow-hidden">
+                                        <div className="px-6 py-5 bg-blue-50/50 border-b border-blue-100 flex items-center justify-between">
+                                            <h3 className="font-bold text-blue-900">{activeTask.title}</h3>
+                                        </div>
+                                        <div className="p-6">
+                                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg font-medium border border-gray-100">
+                                                <PenTool className="w-4 h-4 text-gray-400" />
+                                                رقم الطلب: <span className="font-bold text-gray-900">{activeTask.orders?.order_number || activeTask.orderNumber}</span>
+                                            </div>
+
+                                            {renderDesignConfig(activeTask)}
+
+                                            {activeTask.type === 'design' && (
+                                                <div className="mb-6">
+                                                    {activeTask.approvalStatus === 'rejected' ? (
+                                                        <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl mb-4 text-sm animate-in fade-in slide-in-from-top-2">
+                                                            <div className="flex items-center gap-2 font-bold text-red-900 mb-1">
+                                                                <AlertCircle className="w-4 h-4" />
+                                                                رفض العميل التصميم
+                                                            </div>
+                                                            <p className="text-red-700"><strong>السبب:</strong> {activeTask.rejectionReason}</p>
+                                                            <p className="text-xs text-red-500 mt-2 mt-1">(يرجى رفع تصميم معدل)</p>
+                                                        </div>
+                                                    ) : activeTask.approvalStatus === 'pending' ? (
+                                                        <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-xl mb-4 text-center">
+                                                            <div className="inline-flex w-10 h-10 bg-purple-100 rounded-full items-center justify-center mb-2">
+                                                                <Clock className="w-5 h-5 text-purple-600" />
+                                                            </div>
+                                                            <p className="font-bold text-purple-900 text-sm">بانتظار موافقة العميل</p>
+                                                            <p className="text-xs text-purple-600 mt-1">الرجاء الانتظار حتى يراجع العميل المرفق ويوافق عليه عبر صفحة التتبع.</p>
+                                                        </div>
+                                                    ) : activeTask.approvalStatus === 'approved' ? (
+                                                        <div className="p-4 bg-emerald-50 border-2 border-emerald-200 rounded-xl mb-4 text-center">
+                                                            <div className="inline-flex w-10 h-10 bg-emerald-100 rounded-full items-center justify-center mb-2">
+                                                                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                                                            </div>
+                                                            <p className="font-bold text-emerald-900 text-sm">التصميم معتمد</p>
+                                                            <p className="text-xs text-emerald-700 mt-1">وافق العميل للتو. يمكنك إتمام المهمة الآن.</p>
+                                                        </div>
+                                                    ) : null}
+
+                                                    <div className="relative">
+                                                        <input
+                                                            type="file"
+                                                            className="hidden"
+                                                            id={`upload-${activeTask.id}`}
+                                                            accept="image/*,.pdf"
+                                                            onChange={(e) => handleFileUpload(e, activeTask.id)}
+                                                            disabled={uploadingTask === activeTask.id}
+                                                        />
+
+                                                        {activeTask.designFileUrl ? (
+                                                            <div className="flex flex-col gap-2">
+                                                                <label htmlFor={`upload-${activeTask.id}`} className="w-full border-2 border-dashed border-gray-300 py-3 rounded-xl text-center text-sm font-bold text-gray-500 hover:border-primary hover:text-primary transition-colors cursor-pointer flex items-center justify-center gap-2">
+                                                                    {uploadingTask === activeTask.id ? <span className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : <LayoutTemplate className="w-4 h-4" />}
+                                                                    رفع تصميم معدل
+                                                                </label>
+                                                                <div className="flex items-center justify-center gap-2 mt-2">
+                                                                    <button onClick={(e) => { e.preventDefault(); handleViewFile(e, activeTask.designFileUrl || ''); }} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 flex items-center gap-1">
+                                                                        <Eye className="w-4 h-4" /> عرض التصميم المرفوع
+                                                                    </button>
+                                                                    <button onClick={(e) => { e.preventDefault(); handleDownloadFile(e, activeTask.designFileUrl || '', `design-${activeTask.id}.png`); }} className="text-xs font-bold text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg hover:bg-purple-100 flex items-center gap-1">
+                                                                        <ArrowDownToLine className="w-4 h-4" /> تحميل التصميم
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <label htmlFor={`upload-${activeTask.id}`} className="w-full bg-blue-50 text-blue-700 border-2 border-blue-200 py-4 rounded-xl text-center text-sm font-bold hover:bg-blue-100 transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm">
+                                                                {uploadingTask === activeTask.id ? (
+                                                                    <span className="w-5 h-5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin" />
+                                                                ) : (
+                                                                    <>
+                                                                        <CheckCircle2 className="w-5 h-5" />
+                                                                        تم رفع التصميم وإرساله للعميل للمراجعة
+                                                                    </>
+                                                                )}
+                                                            </label>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {(!activeTask.designFileUrl || activeTask.approvalStatus === 'approved' || activeTask.type === 'pre_press') && (
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={() => handlePauseTask(activeTask.id, activeTask.orderId)}
+                                                        className="flex-1 py-3 text-sm font-bold rounded-xl bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors flex justify-center items-center gap-2"
+                                                    >
+                                                        <Pause className="w-4 h-4" />
+                                                        إيقاف
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleCompleteTask(activeTask.id, activeTask.orderId)}
+                                                        className="flex-[2] py-3 text-sm font-bold rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white hover:opacity-90 transition-opacity shadow-sm flex items-center justify-center gap-2"
+                                                    >
+                                                        <CheckCircle2 className="w-5 h-5" />
+                                                        {activeTask.type === 'design' ? 'اعتماد وإغلاق' : 'إنهاء المهمة'}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Pending Queue Grouped by Order */}
+                            <div className="flex-1 flex flex-col gap-4">
+                                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                    <List className="w-4 h-4" />
+                                    طابور العمل
+                                </h2>
+
+                                <div className="space-y-6">
+                                    {groupedPendingTasks.map(group => (
+                                        <div key={group.orderNumber} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                                            <div className="bg-gray-50 border-b border-gray-200 px-5 py-3 flex justify-between items-center">
+                                                <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                                    الطلـب: {group.orderNumber}
+                                                </h3>
+                                                <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
+                                                    {group.tasks.length} مهام
+                                                </span>
+                                            </div>
+                                            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {group.tasks.map(task => (
+                                                    <div key={task.id} className={`p-4 rounded-xl border ${task.status === 'paused' ? 'bg-orange-50/30 border-orange-100' : 'bg-white border-gray-100'} shadow-sm relative`}>
+                                                        <div className="flex justify-between items-start mb-3">
+                                                            <div className="flex flex-col">
+                                                                <h4 className="font-bold text-gray-900 text-sm">{task.title}</h4>
+                                                                {task.order_items?.name && <span className="text-xs text-gray-500 mt-1">{task.order_items.name}</span>}
+                                                            </div>
+                                                            <div className="flex flex-col items-end gap-1 text-xs font-bold">
+                                                                <span className="bg-gray-100 px-2 py-1 rounded text-gray-600">
+                                                                    {task.orders?.order_number || task.orderNumber}
+                                                                </span>
+                                                                {task.status === 'paused' && <span className="text-orange-600 bg-orange-100 px-2 py-0.5 rounded">موقوفة</span>}
+                                                            </div>
+                                                        </div>
+
+                                                        {renderDesignConfig(task)}
+
+                                                        <div className="mt-3">
+                                                            <button
+                                                                onClick={() => handleClaimAndStart(task.id, task.orderId)}
+                                                                className={`w-full py-2.5 text-sm font-bold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2 ${activeTask
+                                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                                    : 'bg-gray-900 text-white hover:bg-gray-800'
+                                                                    }`}
+                                                                disabled={!!activeTask}
+                                                            >
+                                                                {task.assignedToId === user?.id ? (
+                                                                    <>
+                                                                        <Play className="w-4 h-4" />
+                                                                        {task.status === 'paused' ? 'استئناف' : 'متابعة العمل'}
+                                                                    </>
+                                                                ) : (
+                                                                    'استلام والبدء الآن'
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {activeTab === 'history' && (
+                <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm min-h-[400px]">
+                    {myCompletedTasks.length === 0 ? (
+                        <p className="text-gray-500 text-center py-10">لا يوجد سجل للتصاميم المعالجة بعد.</p>
+                    ) : (
+                        <div className="space-y-4">
+                            {myCompletedTasks.map(task => (
+                                <div key={task.id} className="flex justify-between items-center p-4 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                                            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-gray-900">{task.title}</h4>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                الطلب: {task.orders?.order_number || task.orderNumber} | المنتج: {task.order_items?.name || 'غير محدد'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        {task.designFileUrl && (
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={(e) => { e.preventDefault(); handleViewFile(e, task.designFileUrl || ''); }} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 flex items-center gap-1">
+                                                    <Eye className="w-4 h-4" /> عرض
+                                                </button>
+                                                <button onClick={(e) => { e.preventDefault(); handleDownloadFile(e, task.designFileUrl || '', `design-${task.id}.png`); }} className="text-xs font-bold text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg hover:bg-purple-100 flex items-center gap-1">
+                                                    <ArrowDownToLine className="w-4 h-4" /> تحميل
+                                                </button>
+                                            </div>
+                                        )}
+                                        <div className="text-left">
+                                            <div className="text-sm font-bold text-gray-700 flex items-center gap-1 mb-1 justify-end">
+                                                <Clock className="w-4 h-4 text-gray-400" />
+                                                {task.completedAt ? new Date(task.completedAt).toLocaleDateString('ar-DZ') : 'مكتمل'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}

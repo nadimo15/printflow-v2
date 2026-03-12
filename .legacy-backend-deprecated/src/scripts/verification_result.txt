@@ -1,0 +1,4 @@
+Verifying InsForge Database Schema...
+✅ "profiles" table exists.
+✅ "products" table exists.
+✅ "orders" table exists.
