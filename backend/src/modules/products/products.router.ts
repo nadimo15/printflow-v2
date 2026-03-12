@@ -58,7 +58,7 @@ router.get('/all', authenticate, authorize('admin', 'manager'), async (_req: Req
 // GET /api/products/:id
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const data = await getProduct(req.params.id);
+        const data = await getProduct(req.params.id as string);
         res.json({ success: true, data });
     } catch (err) { next(err); }
 });
@@ -90,7 +90,7 @@ router.delete('/:id', authenticate, authorize('admin'), async (req: Request, res
 // GET /api/products/:id/bom — get BOM for a product
 router.get('/:id/bom', authenticate, authorize('admin', 'manager'), async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const data = await listBOM(req.params.id);
+        const data = await listBOM(req.params.id as string);
         res.json({ success: true, data });
     } catch (err) { next(err); }
 });

@@ -35,7 +35,7 @@ router.post('/', authorize('admin', 'manager'), async (req: Request, res: Respon
 // PATCH /api/tasks/:id — update task
 router.patch('/:id', authorize('admin', 'manager', 'worker', 'designer'), async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const data = await tasksService.updateTask(req.params.id, req.body);
+        const data = await tasksService.updateTask(req.params.id as string, req.body);
         res.json({ success: true, data });
     } catch (err) { next(err); }
 });
@@ -43,7 +43,7 @@ router.patch('/:id', authorize('admin', 'manager', 'worker', 'designer'), async 
 // PATCH /api/tasks/:id/status — update status only
 router.patch('/:id/status', authorize('admin', 'manager', 'worker', 'designer'), async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const data = await tasksService.updateTaskStatus(req.params.id, (req.body.status as any), req.body);
+        const data = await tasksService.updateTaskStatus(req.params.id as string, (req.body.status as any), req.body);
         res.json({ success: true, data });
     } catch (err) { next(err); }
 });
@@ -51,7 +51,7 @@ router.patch('/:id/status', authorize('admin', 'manager', 'worker', 'designer'),
 // POST /api/tasks/:id/assign — assign task
 router.post('/:id/assign', authorize('admin', 'manager'), async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const data = await tasksService.assignTask(req.params.id, (req.body.assignedToId as any), req.user?.id);
+        const data = await tasksService.assignTask(req.params.id as string, (req.body.assignedToId as any), req.user?.id);
         res.json({ success: true, data });
     } catch (err) { next(err); }
 });

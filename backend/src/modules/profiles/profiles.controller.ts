@@ -32,7 +32,7 @@ export async function list(req: Request, res: Response, next: NextFunction): Pro
 
 export async function getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const profile = await profilesService.getProfileById(req.params.id);
+        const profile = await profilesService.getProfileById(req.params.id as string);
         res.json({ success: true, data: profile });
     } catch (err) { next(err); }
 }
@@ -44,7 +44,7 @@ export async function create(req: Request, res: Response, next: NextFunction): P
             res.status(400).json({ success: false, error: { message: parsed.error.errors[0].message } });
             return;
         }
-        const profile = await profilesService.adminCreateUser(parsed.data);
+        const profile = await profilesService.adminCreateUser(parsed.data as any);
         res.status(201).json({ success: true, data: profile });
     } catch (err) { next(err); }
 }
@@ -56,21 +56,21 @@ export async function update(req: Request, res: Response, next: NextFunction): P
             res.status(400).json({ success: false, error: { message: parsed.error.errors[0].message } });
             return;
         }
-        const profile = await profilesService.adminUpdateUser(req.params.id, parsed.data);
+        const profile = await profilesService.adminUpdateUser(req.params.id as string, parsed.data);
         res.json({ success: true, data: profile });
     } catch (err) { next(err); }
 }
 
 export async function deactivate(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const profile = await profilesService.deactivateUser(req.params.id);
+        const profile = await profilesService.deactivateUser(req.params.id as string);
         res.json({ success: true, data: profile });
     } catch (err) { next(err); }
 }
 
 export async function reactivate(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const profile = await profilesService.reactivateUser(req.params.id);
+        const profile = await profilesService.reactivateUser(req.params.id as string);
         res.json({ success: true, data: profile });
     } catch (err) { next(err); }
 }

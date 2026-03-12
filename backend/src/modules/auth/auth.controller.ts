@@ -46,7 +46,7 @@ export async function register(req: Request, res: Response, next: NextFunction):
             });
             return;
         }
-        const user = await authService.registerUser(parsed.data);
+        const user = await authService.registerUser(parsed.data as any);
         res.status(201).json({ success: true, data: user });
     } catch (err) {
         next(err);

@@ -1,82 +1,22 @@
-﻿src/modules/customers/customers.router.ts(25,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/customers/customers.router.ts(57,70): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/customers/customers.router.ts(61,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/inventory/inventory.router.ts(45,67): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/inventory/inventory.router.ts(56,71): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/inventory/inventory.router.ts(61,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/inventory/inventory.router.ts(67,17): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/misc/misc.routers.ts(41,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/misc/misc.routers.ts(63,86): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/misc/misc.routers.ts(68,54): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/misc/misc.routers.ts(106,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/misc/misc.routers.ts(108,23): error TS2322: Type 'string | string[]' is not assignable to type 'string'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/orders/orders.controller.ts(23,55): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/orders/orders.controller.ts(30,59): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/orders/orders.controller.ts(44,60): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/orders/orders.controller.ts(51,60): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/orders/orders.controller.ts(58,58): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/orders/orders.controller.ts(65,60): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
-  Type 'string[]' is not assignable to type 'string'.
+﻿src/modules/auth/auth.controller.ts(49,53): error TS2345: Argument of type '{ email?: string; password?: string; name?: string; role?: "worker" | "admin" | "manager" | "designer"; phone?: string; }' is not assignable to parameter of type '{ email: string; password: string; name: string; role?: string; phone?: string; }'.
+  Property 'email' is optional in type '{ email?: string; password?: string; name?: string; role?: "worker" | "admin" | "manager" | "designer"; phone?: string; }' but required in type '{ email: string; password: string; name: string; role?: string; phone?: string; }'.
 src/modules/products/products.router.ts(61,39): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/products/products.router.ts(77,61): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/products/products.router.ts(85,48): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
   Type 'string[]' is not assignable to type 'string'.
 src/modules/products/products.router.ts(93,36): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
   Type 'string[]' is not assignable to type 'string'.
-src/modules/products/products.router.ts(102,55): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"ProductBOM"> | undefined'.
-  Type 'string[]' is not assignable to type 'string | StringFilter<"ProductBOM"> | undefined'.
-src/modules/products/products.router.ts(108,36): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
-  Type 'string[]' is not assignable to type 'string'.
 src/modules/profiles/profiles.controller.ts(35,62): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
   Type 'string[]' is not assignable to type 'string'.
+src/modules/profiles/profiles.controller.ts(47,63): error TS2345: Argument of type '{ email?: string; password?: string; name?: string; role?: "worker" | "admin" | "manager" | "designer"; phone?: string; }' is not assignable to parameter of type '{ email: string; password: string; name: string; role: string; phone?: string; }'.
+  Property 'email' is optional in type '{ email?: string; password?: string; name?: string; role?: "worker" | "admin" | "manager" | "designer"; phone?: string; }' but required in type '{ email: string; password: string; name: string; role: string; phone?: string; }'.
 src/modules/profiles/profiles.controller.ts(59,63): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
   Type 'string[]' is not assignable to type 'string'.
 src/modules/profiles/profiles.controller.ts(66,62): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
   Type 'string[]' is not assignable to type 'string'.
 src/modules/profiles/profiles.controller.ts(73,62): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
   Type 'string[]' is not assignable to type 'string'.
-src/modules/purchase-orders/purchaseOrders.router.ts(61,62): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"PurchaseOrderItem"> | undefined'.
-  Type 'string[]' is not assignable to type 'string | StringFilter<"PurchaseOrderItem"> | undefined'.
-src/modules/purchase-orders/purchaseOrders.router.ts(70,22): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"PurchaseOrderItem"> | undefined'.
-  Type 'string[]' is not assignable to type 'string | StringFilter<"PurchaseOrderItem"> | undefined'.
-src/modules/purchase-orders/purchaseOrders.router.ts(81,65): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/purchase-orders/purchaseOrders.router.ts(82,74): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"PurchaseOrderItem"> | undefined'.
-  Type 'string[]' is not assignable to type 'string | StringFilter<"PurchaseOrderItem"> | undefined'.
-src/modules/purchase-orders/purchaseOrders.router.ts(100,21): error TS2322: Type 'string | string[]' is not assignable to type 'string | null | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/shipping/shipping.router.ts(32,66): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/shipping/shipping.router.ts(39,53): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/site-config/siteConfig.router.ts(50,21): error TS2322: Type 'JsonValue' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
-  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
-src/modules/suppliers/suppliers.router.ts(28,51): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
-  Type 'string[]' is not assignable to type 'string'.
 src/modules/tasks/tasks.router.ts(38,52): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
   Type 'string[]' is not assignable to type 'string'.
 src/modules/tasks/tasks.router.ts(46,58): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
   Type 'string[]' is not assignable to type 'string'.
 src/modules/tasks/tasks.router.ts(54,52): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of type 'string'.
-  Type 'string[]' is not assignable to type 'string'.
-src/modules/tasks/tasks.router.ts(63,13): error TS2322: Type 'string | string[]' is not assignable to type 'string'.
   Type 'string[]' is not assignable to type 'string'.
