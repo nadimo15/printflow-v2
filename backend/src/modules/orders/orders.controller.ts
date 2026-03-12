@@ -6,7 +6,7 @@ import * as ordersService from './orders.service';
 
 export async function list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const data = await ordersService.listOrders({ status: req.query.status as string });
+        const data = await ordersService.listOrders({ status: (req.query.statu as string)s as string });
         res.json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -41,7 +41,7 @@ export async function create(req: Request, res: Response, next: NextFunction): P
 
 export async function updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const data = await ordersService.updateOrderStatus(req.params.id, req.body.status);
+        const data = await ordersService.updateOrderStatus(req.params.id, (req.body.status as any));
         res.json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -62,7 +62,7 @@ export async function softDelete(req: Request, res: Response, next: NextFunction
 
 export async function replaceItems(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const data = await ordersService.replaceOrderItems(req.params.id, req.body.items || []);
+        const data = await ordersService.replaceOrderItems(req.params.id, (req.body.items as any) || []);
         res.json({ success: true, data });
     } catch (err) { next(err); }
 }

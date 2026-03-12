@@ -29,14 +29,14 @@ router.post('/', authenticate, authorize('admin', 'manager'), async (req, res, n
 
 router.put('/:id', authenticate, authorize('admin', 'manager'), async (req, res, next) => {
     try {
-        const data = await prisma.shippingRule.update({ where: { id: req.params.id }, data: req.body });
+        const data = await prisma.shippingRule.update({ where: { id: (req.params.id as string) }, data: req.body });
         res.json({ success: true, data });
     } catch (err) { next(err); }
 });
 
 router.delete('/:id', authenticate, authorize('admin'), async (req, res, next) => {
     try {
-        await prisma.shippingRule.delete({ where: { id: req.params.id } });
+        await prisma.shippingRule.delete({ where: { id: (req.params.id as string) } });
         res.json({ success: true });
     } catch (err) { next(err); }
 });

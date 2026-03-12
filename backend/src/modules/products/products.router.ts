@@ -74,7 +74,7 @@ router.post('/', authenticate, authorize('admin', 'manager'), async (req: Reques
 // PUT /api/products/:id — admin/manager only
 router.put('/:id', authenticate, authorize('admin', 'manager'), async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const data = await prisma.product.update({ where: { id: req.params.id }, data: req.body });
+        const data = await prisma.product.update({ where: { id: (req.params.id as string) }, data: req.body });
         res.json({ success: true, data });
     } catch (err) { next(err); }
 });
@@ -82,7 +82,7 @@ router.put('/:id', authenticate, authorize('admin', 'manager'), async (req: Requ
 // DELETE /api/products/:id — admin only
 router.delete('/:id', authenticate, authorize('admin'), async (req: Request, res: Response, next: NextFunction) => {
     try {
-        await prisma.product.delete({ where: { id: req.params.id } });
+        await prisma.product.delete({ where: { id: (req.params.id as string) } });
         res.json({ success: true });
     } catch (err) { next(err); }
 });
@@ -98,11 +98,11 @@ router.get('/:id/bom', authenticate, authorize('admin', 'manager'), async (req: 
 // PUT /api/products/:id/bom — replace entire BOM
 router.put('/:id/bom', authenticate, authorize('admin', 'manager'), async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const productId = req.params.id;
+        const productId = (req.params.id as string);
         await prisma.productBOM.deleteMany({ where: { productId } });
         if (req.body.items?.length) {
             await prisma.productBOM.createMany({
-                data: req.body.items.map((item: any) => ({ ...item, productId })),
+                data: (req.body.items as any).map((item: any) => ({ ...item, productId })),
             });
         }
         const data = await listBOM(productId);

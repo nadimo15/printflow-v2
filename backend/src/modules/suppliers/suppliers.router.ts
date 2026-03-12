@@ -20,12 +20,12 @@ router.post('/', async (req, res, next) => {
 });
 
 router.put('/:id', async (req, res, next) => {
-    try { res.json({ success: true, data: await prisma.supplier.update({ where: { id: req.params.id }, data: req.body }) }); }
+    try { res.json({ success: true, data: await prisma.supplier.update({ where: { id: (req.params.id as string) }, data: req.body }) }); }
     catch (err) { next(err); }
 });
 
 router.delete('/:id', authenticate, authorize('admin'), async (req, res, next) => {
-    try { await prisma.supplier.delete({ where: { id: req.params.id } }); res.json({ success: true }); }
+    try { await prisma.supplier.delete({ where: { id: (req.params.id as string) } }); res.json({ success: true }); }
     catch (err) { next(err); }
 });
 

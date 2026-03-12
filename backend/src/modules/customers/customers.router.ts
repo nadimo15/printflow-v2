@@ -22,7 +22,7 @@ router.get('/', authorize('admin', 'manager'), async (_req, res, next) => {
 router.get('/:id', authorize('admin', 'manager'), async (req, res, next) => {
     try {
         const data = await prisma.customer.findUnique({
-            where: { id: req.params.id },
+            where: { id: (req.params.id as string) },
             include: { orders: true },
         });
         if (!data) throw new AppError('Customer not found.', 404);
@@ -54,11 +54,11 @@ router.post('/:id/payment', authorize('admin', 'manager'), async (req: Request, 
     try {
         const { amount } = req.body;
         if (!amount || amount <= 0) throw new AppError('Invalid payment amount.', 400);
-        const customer = await prisma.customer.findUnique({ where: { id: req.params.id } });
+        const customer = await prisma.customer.findUnique({ where: { id: (req.params.id as string) } });
         if (!customer) throw new AppError('Customer not found.', 404);
         const newBalance = Math.max(0, Number(customer.outstandingBalance) - Number(amount));
         const updated = await prisma.customer.update({
-            where: { id: req.params.id },
+            where: { id: (req.params.id as string) },
             data: { outstandingBalance: newBalance },
         });
         res.json({ success: true, data: { customer: updated, newBalance } });

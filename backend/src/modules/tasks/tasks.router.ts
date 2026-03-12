@@ -43,7 +43,7 @@ router.patch('/:id', authorize('admin', 'manager', 'worker', 'designer'), async 
 // PATCH /api/tasks/:id/status — update status only
 router.patch('/:id/status', authorize('admin', 'manager', 'worker', 'designer'), async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const data = await tasksService.updateTaskStatus(req.params.id, req.body.status, req.body);
+        const data = await tasksService.updateTaskStatus(req.params.id, (req.body.status as any), req.body);
         res.json({ success: true, data });
     } catch (err) { next(err); }
 });
@@ -51,7 +51,7 @@ router.patch('/:id/status', authorize('admin', 'manager', 'worker', 'designer'),
 // POST /api/tasks/:id/assign — assign task
 router.post('/:id/assign', authorize('admin', 'manager'), async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const data = await tasksService.assignTask(req.params.id, req.body.assignedToId, req.user?.id);
+        const data = await tasksService.assignTask(req.params.id, (req.body.assignedToId as any), req.user?.id);
         res.json({ success: true, data });
     } catch (err) { next(err); }
 });
@@ -60,11 +60,11 @@ router.post('/:id/assign', authorize('admin', 'manager'), async (req: Request, r
 router.post('/:id/complete', authorize('admin', 'manager', 'worker'), async (req: Request, res: Response, next: NextFunction) => {
     try {
         const data = await tasksService.completeTaskWithInventory({
-            taskId: req.params.id,
-            orderId: req.body.orderId,
-            workerId: req.body.workerId || req.user?.id,
-            blanksWasted: req.body.blanksWasted,
-            reworkReason: req.body.reworkReason,
+            taskId: (req.params.id as string),
+            orderId: (req.body.orderId as any),
+            workerId: (req.body.workerId as any) || req.user?.id,
+            blanksWasted: (req.body.blanksWasted as any),
+            reworkReason: (req.body.reworkReason as any),
         });
         res.json({ success: true, data });
     } catch (err) { next(err); }

@@ -39,7 +39,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 // PUT /api/purchase-orders/:id
 router.put('/:id', async (req, res, next) => {
     try {
-        const data = await prisma.purchaseOrder.update({ where: { id: req.params.id }, data: req.body });
+        const data = await prisma.purchaseOrder.update({ where: { id: (req.params.id as string) }, data: req.body });
         res.json({ success: true, data });
     } catch (err) { next(err); }
 });
@@ -48,7 +48,7 @@ router.put('/:id', async (req, res, next) => {
 router.get('/:id/items', async (req, res, next) => {
     try {
         const data = await prisma.purchaseOrderItem.findMany({
-            where: { purchaseOrderId: req.params.id },
+            where: { purchaseOrderId: (req.params.id as string) },
             include: { inventoryItem: true },
         });
         res.json({ success: true, data });
@@ -58,16 +58,16 @@ router.get('/:id/items', async (req, res, next) => {
 // PUT /api/purchase-orders/:id/items — replace all items
 router.put('/:id/items', async (req: Request, res: Response, next: NextFunction) => {
     try {
-        await prisma.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: req.params.id } });
+        await prisma.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: (req.params.id as string) } });
         const items = (req.body.items || []).map((item: any) => ({
             ...item,
-            purchaseOrderId: req.params.id,
+            purchaseOrderId: (req.params.id as string),
         }));
         if (items.length > 0) {
             await prisma.purchaseOrderItem.createMany({ data: items });
         }
         const data = await prisma.purchaseOrderItem.findMany({
-            where: { purchaseOrderId: req.params.id },
+            where: { purchaseOrderId: (req.params.id as string) },
             include: { inventoryItem: true },
         });
         res.json({ success: true, data });
@@ -77,7 +77,7 @@ router.put('/:id/items', async (req: Request, res: Response, next: NextFunction)
 // POST /api/purchase-orders/:id/receive — receive PO, update inventory stock
 router.post('/:id/receive', async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const poId = req.params.id;
+        const poId = (req.params.id as string);
         const po = await prisma.purchaseOrder.update({ where: { id: poId }, data: { status: 'completed' } });
         const items = await prisma.purchaseOrderItem.findMany({ where: { purchaseOrderId: poId } });
 

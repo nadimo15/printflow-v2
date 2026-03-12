@@ -33,7 +33,7 @@ router.patch('/draft', authenticate, authorize('admin'), async (req: Request, re
         await ensureDefaultRow();
         const data = await prisma.siteConfig.update({
             where: { id: 'default' },
-            data: { draftData: req.body.draft_data ?? req.body },
+            data: { draftData: (req.body.draft_data as any) ?? req.body },
         });
         res.json({ success: true, data });
     } catch (err) { next(err); }

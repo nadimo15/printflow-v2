@@ -38,8 +38,8 @@ workstationsRouter.post('/', async (req: Request, res: Response, next: NextFunct
 workstationsRouter.patch('/:id/maintenance', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const data = await prisma.workstation.update({
-            where: { id: req.params.id },
-            data: { lastMaintenanceDate: req.body.date ? new Date(req.body.date) : null },
+            where: { id: (req.params.id as string) },
+            data: { lastMaintenanceDate: (req.body.date as any) ? new Date(req.body.date) : null },
         });
         res.json({ success: true, data });
     } catch (err) { next(err); }
@@ -60,12 +60,12 @@ screenFramesRouter.post('/', async (req: Request, res: Response, next: NextFunct
 });
 
 screenFramesRouter.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
-    try { res.json({ success: true, data: await prisma.screenFrame.update({ where: { id: req.params.id }, data: req.body }) }); }
+    try { res.json({ success: true, data: await prisma.screenFrame.update({ where: { id: (req.params.id as string) }, data: req.body }) }); }
     catch (err) { next(err); }
 });
 
 screenFramesRouter.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
-    try { await prisma.screenFrame.delete({ where: { id: req.params.id } }); res.json({ success: true }); }
+    try { await prisma.screenFrame.delete({ where: { id: (req.params.id as string) } }); res.json({ success: true }); }
     catch (err) { next(err); }
 });
 
@@ -103,9 +103,9 @@ rolesRouter.get('/', async (_req, res, next) => {
 rolesRouter.put('/:role', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const data = await prisma.rolePermission.upsert({
-            where: { role: req.params.role },
-            update: { permissions: req.body.permissions },
-            create: { role: req.params.role, permissions: req.body.permissions },
+            where: { role: (req.params.role as string) },
+            update: { permissions: (req.body.permissions as any) },
+            create: { role: (req.params.role as string), permissions: (req.body.permissions as any) },
         });
         res.json({ success: true, data });
     } catch (err) { next(err); }

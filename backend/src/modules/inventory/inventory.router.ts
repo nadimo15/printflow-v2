@@ -14,7 +14,7 @@ router.use(authenticate, authorize('admin', 'manager'));
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const where: any = {};
-        if (req.query.type) where.type = req.query.type;
+        if (req.query.type) where.type = (req.query.type as string);
         const data = await prisma.inventoryItem.findMany({ where, orderBy: { name: 'asc' } });
         res.json({ success: true, data });
     } catch (err) { next(err); }
@@ -42,7 +42,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 // PUT /api/inventory/:id
 router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const data = await prisma.inventoryItem.update({ where: { id: req.params.id }, data: req.body });
+        const data = await prisma.inventoryItem.update({ where: { id: (req.params.id as string) }, data: req.body });
         res.json({ success: true, data });
     } catch (err) { next(err); }
 });
@@ -53,18 +53,18 @@ router.patch('/:id/stock', async (req: Request, res: Response, next: NextFunctio
         const { newQty, reason } = req.body;
         if (newQty === undefined) throw new AppError('newQty is required.', 400);
 
-        const item = await prisma.inventoryItem.findUnique({ where: { id: req.params.id } });
+        const item = await prisma.inventoryItem.findUnique({ where: { id: (req.params.id as string) } });
         if (!item) throw new AppError('Inventory item not found.', 404);
 
         const delta = Number(newQty) - Number(item.stockQuantity);
         const updated = await prisma.inventoryItem.update({
-            where: { id: req.params.id },
+            where: { id: (req.params.id as string) },
             data: { stockQuantity: newQty },
         });
 
         await prisma.inventoryMovement.create({
             data: {
-                inventoryItemId: req.params.id,
+                inventoryItemId: (req.params.id as string),
                 movementType: 'adjustment',
                 quantity: Math.abs(delta),
                 notes: `Adjustment: ${delta > 0 ? '+' : ''}${delta}. Reason: ${reason || 'Manual adjustment'}`,
