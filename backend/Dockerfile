@@ -1,12 +1,12 @@
 # ─────────────────────────────────────────────
 # Stage 1: Builder
 # ─────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
 
-# Install dependencies needed by Prisma
-RUN apk add --no-cache openssl
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl
 
 # Install dependencies
 COPY package*.json ./
@@ -24,12 +24,12 @@ RUN npm run build
 # ─────────────────────────────────────────────
 # Stage 2: Production runner
 # ─────────────────────────────────────────────
-FROM node:20-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 
 WORKDIR /app
 
-# Install dependencies needed by Prisma
-RUN apk add --no-cache openssl
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl
 
 # Install production deps only
 COPY package*.json ./
