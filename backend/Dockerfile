@@ -5,6 +5,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install dependencies needed by Prisma
+RUN apk add --no-cache openssl
+
 # Install dependencies
 COPY package*.json ./
 RUN npm ci --only=production=false
@@ -24,6 +27,9 @@ RUN npm run build
 FROM node:20-alpine AS runner
 
 WORKDIR /app
+
+# Install dependencies needed by Prisma
+RUN apk add --no-cache openssl
 
 # Install production deps only
 COPY package*.json ./
