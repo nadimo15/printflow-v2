@@ -131,11 +131,24 @@ export const api = {
     },
 
     respondToDesignApproval: async (taskId: string, response: 'approved' | 'rejected', notes?: string) => {
+<<<<<<< Updated upstream
       // NOTE: Will fail if not authenticated
       return fetchApi(`/tasks/${taskId}`, {
         method: 'PATCH',
         body: JSON.stringify({ approvalStatus: response, status: response === 'approved' ? 'completed' : 'in_progress', rejectionReason: response === 'rejected' ? notes : null })
       });
+=======
+      return handleResponse(
+        (client as any).database
+          .from('tasks')
+          .update({
+            approval_status: response,
+            status: response === 'approved' ? 'completed' : 'in_progress', // if rejected, goes back to in progress for designer
+            rejection_reason: response === 'rejected' ? notes : null
+          })
+          .eq('id', taskId)
+      );
+>>>>>>> Stashed changes
     },
   },
 
@@ -194,6 +207,15 @@ export const api = {
   siteConfig: {
     get: async () => {
       return fetchApi('/site-config');
+    }
+  },
+
+  // Site Config
+  siteConfig: {
+    get: async () => {
+      return handleResponse(
+        (client as any).database.from('site_config').select('draft_data, published_data').eq('id', 'default').single()
+      );
     }
   }
 };

@@ -15,20 +15,57 @@ export const api = {
   // Auth
   auth: {
     login: async (credentials: any) => {
-      // Backend returns: { success: true, data: { token, user: { id, email, name, role... } } }
-      return await apiClient.post('/auth/login', credentials);
+      try {
+        // 1. Authenticate with InsForge GoTrue
+        const { data, error } = await client.auth.signInWithPassword({
+          email: credentials.email,
+          password: credentials.password
+        });
+
+        if (error) throw error;
+        if (!data.user || !data.session) throw new Error("Invalid login response");
+
+        // 2. Fetch the user's extended profile (name, role) from the profiles table
+        const { data: profile } = await client.database
+          .from('profiles')
+          .select('name, role')
+          .eq('id', data.user.id)
+          .single();
+
+        // 3. Match the legacy ERP response format expected in authStore
+        return {
+          success: true,
+          data: {
+            token: data.session.access_token,
+            user: {
+              id: data.user.id,
+              email: data.user.email,
+              name: profile?.name || 'Administrator',
+              role: profile?.role || 'admin'
+            }
+          }
+        };
+      } catch (err: any) {
+        throw new Error(err.message || 'Login failed via InsForge');
+      }
     },
     register: async (data: any) => {
-      // Backend returns: { success: true, data: { ...user } }
-      return await apiClient.post('/auth/register', data);
+      try {
+        const { data: authData, error } = await client.auth.signUp({
+          email: data.email,
+          password: data.password,
+          options: { data: { name: data.name, role: data.role || 'user' } }
+        });
+        if (error) throw error;
+        return { success: true, data: authData?.user };
+      } catch (err: any) {
+        throw new Error(err.message || 'Registration failed');
+      }
     },
-    // Sign out
     logout: async () => {
       try {
-        await apiClient.post('/auth/logout');
-      } catch (e) {
-        // Ignore logout errors
-      }
+        await client.auth.signOut();
+      } catch (e) { /* Ignore */ }
       return { success: true };
     },
   },
